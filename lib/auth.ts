@@ -11,7 +11,7 @@ function config() {
   const email = process.env.AUTH_EMAIL?.trim().toLowerCase() ?? "";
   const password = process.env.AUTH_PASSWORD ?? "";
   const secret = process.env.AUTH_SECRET ?? "";
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || password.length < 12 || secret.length < 32)
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || password.length < 8 || secret.length < 32)
     return null;
   return { email, password, key: new TextEncoder().encode(secret) };
 }

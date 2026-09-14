@@ -16,7 +16,7 @@ Edit `.env.local` (a root `.env` also works):
 
 ```dotenv
 AUTH_EMAIL=your-email@example.com
-AUTH_PASSWORD="your-unique-password-of-at-least-12-characters"
+AUTH_PASSWORD="your-unique-password-of-at-least-8-characters"
 AUTH_SECRET="paste-the-random-secret-generated-above"
 ```
 

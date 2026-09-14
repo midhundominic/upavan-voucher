@@ -75,7 +75,7 @@ export function LoginForm({
               <div>
                 <strong>Your workspace is almost ready</strong>
                 <p>
-                  Set <code>AUTH_EMAIL</code>, <code>AUTH_PASSWORD</code> (12+ characters), and{" "}
+                  Set <code>AUTH_EMAIL</code>, <code>AUTH_PASSWORD</code> (8+ characters), and{" "}
                   <code>AUTH_SECRET</code> (32+ characters) in your <code>.env.local</code> file,
                   then restart the app.
                 </p>
@@ -91,7 +91,7 @@ export function LoginForm({
                 type="email"
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
-                placeholder="you@example.com"
+                placeholder="you@upavanresort.com"
                 autoComplete="username"
                 required
                 maxLength={254}

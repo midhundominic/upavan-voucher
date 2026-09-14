@@ -3,7 +3,8 @@ import { existsSync } from "node:fs";
 
 // Test credentials are isolated to the test server, never application defaults.
 export const TEST_EMAIL = "designer@example.test";
-export const TEST_PASSWORD = "Only-for-local-e2e-tests-2026";
+// Exercise the minimum supported length with an exactly eight-character password.
+export const TEST_PASSWORD = "E2eOnly!";
 
 export default defineConfig({
   testDir: "./tests",
