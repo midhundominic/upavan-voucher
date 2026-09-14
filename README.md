@@ -34,22 +34,23 @@ For production: `npm run build` followed by `npm start`. Deploy to a Node.js-com
 
 Place or replace these files inside `public/assets/`:
 
-| File                  | Placement                                                       |
-| --------------------- | --------------------------------------------------------------- |
-| `upavan-logo.png`     | Resort logo on the front, back, app header, and browser favicon |
-| `upavan-seal.png`     | Original resort seal next to the sponsor on the front           |
-| `room-main.jpg`       | Main front photograph                                           |
-| `resort-pool.jpg`     | Back hero photograph                                            |
-| `room-2.jpg`          | First gallery photograph                                        |
-| `restaurant.jpg`      | Second gallery photograph                                       |
-| `view.jpg`            | Third gallery photograph                                        |
-| `resort-property.jpg` | Sign-in page photograph                                         |
+| File                  | Placement                                             |
+| --------------------- | ----------------------------------------------------- |
+| `upavan-logo.png`     | Resort logo on the front, back, and app header        |
+| `upavan-favicon.svg`  | Square browser-tab icon with the original resort logo |
+| `upavan-seal.png`     | Original resort seal next to the sponsor on the front |
+| `room-main.jpg`       | Main front photograph                                 |
+| `resort-pool.jpg`     | Back hero photograph                                  |
+| `room-2.jpg`          | First gallery photograph                              |
+| `restaurant.jpg`      | Second gallery photograph                             |
+| `view.jpg`            | Third gallery photograph                              |
+| `resort-property.jpg` | Sign-in page photograph                               |
 
 Existing files load by default. Reload the page after replacing a source file; production deployments should be rebuilt. The **Reset Voucher** button also checks the default files again. Missing photos have neutral botanical placeholders, and a missing logo has a simple text fallback. The seal is **never recreated**: upload your actual seal or add `upavan-seal.png`; until then, it is omitted from the voucher. Transparency and aspect ratio are preserved with `object-fit: contain`.
 
 The **Resort Assets** panel supports click-to-upload, drag-and-drop, replace, and remove for all seven voucher assets, including the seal. Accepts PNG, JPG/JPEG, and WEBP up to 15 MB and 40 megapixels. Images are decoded and validated before appearing. Browser object URLs are released on replace, remove, reset, and exit. Uploads never leave the browser and last only for the current tab session. Names and template layouts persist after refresh; uploaded photos return to the source defaults.
 
-The browser favicon and Apple touch icon use the actual `public/assets/upavan-logo.png` file. Replacing a voucher logo temporarily through the upload panel does not change the site favicon.
+The browser favicon uses `public/assets/upavan-favicon.svg`: the original logo embedded in a square SVG with its transparent side margins excluded, its proportions preserved, and a cream background for visibility on dark tabs. The favicon has its own URL to avoid the previously cached wide logo. If changing the resort branding, update this SVG as well. The Apple touch icon uses `public/assets/upavan-logo.png`. Replacing a voucher logo temporarily through the upload panel does not change the site favicon.
 
 Bundled logo and example resort photographs were downloaded from the [official Upavan Resort website](https://www.upavanresort.com/); exact source URLs are recorded in [public/assets/SOURCES.md](public/assets/SOURCES.md). These are official website defaults, not local copies of every chat attachment. Replace them with your preferred originals using the editor or filenames above.
 

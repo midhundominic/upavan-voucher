@@ -18,7 +18,7 @@ export const metadata: Metadata = {
     "A thoughtful gesture. A beautiful escape. Create a personalized complimentary stay voucher for Upavan Resort, Wayanad.",
   robots: { index: false, follow: false },
   icons: {
-    icon: { url: "/assets/upavan-logo.png", type: "image/png" },
+    icon: { url: "/assets/upavan-favicon.svg", type: "image/svg+xml", sizes: "any" },
     apple: { url: "/assets/upavan-logo.png", type: "image/png" },
   },
 };

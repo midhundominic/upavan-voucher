@@ -26,7 +26,10 @@ test("sign-in protects the designer, validates credentials, and signs out", asyn
   await page.goto("/");
   await expect(page).toHaveURL(/\/login$/);
   await expect(page.getByRole("heading", { name: /Voucher Designer/ })).toBeVisible();
-  await expect(page.locator('link[rel="icon"]')).toHaveAttribute("href", "/assets/upavan-logo.png");
+  await expect(page.locator('link[rel="icon"]')).toHaveAttribute(
+    "href",
+    "/assets/upavan-favicon.svg",
+  );
   await page.screenshot({ path: path.join(artifacts, "login-desktop.png"), fullPage: true });
   await page.getByLabel("Email address").fill(TEST_EMAIL);
   await page.getByLabel("Password", { exact: true }).fill("wrong-password");
