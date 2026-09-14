@@ -26,6 +26,7 @@ test("sign-in protects the designer, validates credentials, and signs out", asyn
   await page.goto("/");
   await expect(page).toHaveURL(/\/login$/);
   await expect(page.getByRole("heading", { name: /Voucher Designer/ })).toBeVisible();
+  await expect(page.locator('link[rel="icon"]')).toHaveAttribute("href", "/assets/upavan-logo.png");
   await page.screenshot({ path: path.join(artifacts, "login-desktop.png"), fullPage: true });
   await page.getByLabel("Email address").fill(TEST_EMAIL);
   await page.getByLabel("Password", { exact: true }).fill("wrong-password");
@@ -55,8 +56,12 @@ test("live names persist, both views work, and the original message uses edited 
   await page.screenshot({ path: path.join(artifacts, "designer-desktop.png"), fullPage: true });
   await page.getByLabel("Couple Name", { exact: true }).fill("Devika and Arjun");
   await page.getByLabel("Sponsor / Regards Name", { exact: true }).fill("Meera and Ravi.");
-  await expect(page.locator(".guest-banner")).toContainText("Devika and Arjun");
-  await expect(page.locator(".sponsor-name")).toHaveText("Meera and Ravi.");
+  await expect(page.locator('.voucher-front [data-element-id="couple"]')).toContainText(
+    "Devika and Arjun",
+  );
+  await expect(page.locator('.voucher-front [data-element-id="sponsor"] .artwork-text')).toHaveText(
+    "Meera and Ravi.",
+  );
   await expect
     .poll(() => page.evaluate(() => localStorage.getItem("upavan-voucher:v1")))
     .toContain("Devika and Arjun");
@@ -66,7 +71,9 @@ test("live names persist, both views work, and the original message uses edited 
     "Meera and Ravi.",
   );
   await page.getByRole("switch", { name: "Include original invitation message" }).click();
-  await expect(page.locator(".voucher-invitation")).toContainText("Dear Devika and Arjun,");
+  await expect(page.locator('.voucher-front [data-element-id="invitation"]')).toContainText(
+    "Dear Devika and Arjun,",
+  );
   await page.getByRole("tab", { name: "Back", exact: true }).click();
   await expect(
     page.getByRole("article", { name: "Back of complimentary stay voucher" }),
@@ -110,7 +117,10 @@ test("uploads validate, the original seal remains uncropped, and reset confirms 
     .locator(".asset-upload")
     .filter({ has: page.locator("#asset-mainRoomImage") })
     .dispatchEvent("drop", { dataTransfer: transfer });
-  await expect(page.locator(".front-photo img")).toHaveAttribute("src", /^blob:/);
+  await expect(page.locator('.voucher-front [data-element-id="room"] img')).toHaveAttribute(
+    "src",
+    /^blob:/,
+  );
   await expect(page.locator(".upload-error")).toHaveCount(0);
   await transfer.dispose();
   await page.locator("#asset-seal").setInputFiles("public/assets/upavan-logo.png");
@@ -133,7 +143,10 @@ test("uploads validate, the original seal remains uncropped, and reset confirms 
   await expect(page.getByLabel("Couple Name", { exact: true })).toHaveValue(
     "Anupama and Soorya Prakash",
   );
-  await expect(page.locator(".front-photo img")).toHaveAttribute("src", "/assets/room-main.jpg");
+  await expect(page.locator('.voucher-front [data-element-id="room"] img')).toHaveAttribute(
+    "src",
+    "/assets/room-main.jpg",
+  );
   await page.reload();
   await expect(page.getByLabel("Couple Name", { exact: true })).toHaveValue(
     "Anupama and Soorya Prakash",
@@ -143,8 +156,24 @@ test("uploads validate, the original seal remains uncropped, and reset confirms 
 test("PNG exports are 1800 × 1200, and PDF and print contain both voucher sides", async ({
   page,
 }) => {
+  // Compare artwork at its native preview size, avoiding fractional canvas scaling.
+  await page.setViewportSize({ width: 1680, height: 1200 });
   await signIn(page);
+  await page.locator(".voucher-front").scrollIntoViewIfNeeded();
+  // Align the preview frame to device pixels: a fractional page offset otherwise
+  // makes Playwright capture 601 rows for a 600 px card and distorts the comparison.
+  await page
+    .locator(".voucher-scale-frame")
+    .first()
+    .evaluate((node) => {
+      const box = node.getBoundingClientRect();
+      (node as HTMLElement).style.transform =
+        `translate(${Math.ceil(box.x) - box.x}px, ${Math.ceil(box.y) - box.y}px)`;
+    });
   const preview = await page.locator(".voucher-front").screenshot({ scale: "css" });
+  await page
+    .locator(".voucher-front")
+    .screenshot({ path: path.join(artifacts, "front-preview.png"), scale: "css" });
   for (const side of ["Front", "Back"]) {
     const downloadEvent = page.waitForEvent("download");
     await page.getByRole("button", { name: `Download ${side} PNG`, exact: true }).click();
@@ -218,6 +247,11 @@ test("mobile layout has controls first, no horizontal overflow, and constant car
   await page.getByLabel("Email address").fill("");
   await page.screenshot({ path: path.join(artifacts, "login-mobile.png"), fullPage: true });
   await signIn(page);
+  await expect(page.getByLabel("Couple Name", { exact: true })).toHaveCSS("font-size", "16px");
+  await expect(page.getByRole("button", { name: "Download Front PNG", exact: true })).toHaveCSS(
+    "font-size",
+    "14px",
+  );
   await page.getByRole("tab", { name: "Show Both" }).click();
   const controls = await page.locator(".controls-panel").boundingBox();
   const preview = await page.locator(".preview-panel").boundingBox();
@@ -230,6 +264,15 @@ test("mobile layout has controls first, no horizontal overflow, and constant car
     expect(bounds!.width / bounds!.height).toBeCloseTo(1.5, 2);
   }
   await page.screenshot({ path: path.join(artifacts, "designer-mobile.png"), fullPage: true });
+  await page.getByRole("button", { name: "Design & layers", exact: true }).click();
+  await page.getByRole("button", { name: "Add text", exact: true }).click();
+  await page.getByLabel("Text content", { exact: true }).fill("A wonderful getaway");
+  await expect(page.getByLabel("Text content", { exact: true })).toHaveCSS("font-size", "16px");
+  await expect(page.getByLabel("Width", { exact: true })).toHaveCSS("font-size", "16px");
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
+    true,
+  );
+  await page.screenshot({ path: path.join(artifacts, "editor-mobile.png"), fullPage: true });
 });
 
 test("tampered sessions are rejected and damaged browser storage recovers safely", async ({
@@ -241,7 +284,13 @@ test("tampered sessions are rejected and damaged browser storage recovers safely
   ]);
   await page.goto("/");
   await expect(page).toHaveURL(/\/login$/);
-  await page.evaluate(() => localStorage.setItem("upavan-voucher:v1", "{corrupt"));
+  await page.evaluate(() => {
+    localStorage.setItem("upavan-voucher:v1", "{corrupt");
+    localStorage.setItem(
+      "upavan-design:v1",
+      JSON.stringify({ template: "classic", drafts: { classic: { front: [{}] } } }),
+    );
+  });
   await signIn(page);
   await expect(page.getByLabel("Couple Name", { exact: true })).toHaveValue(
     "Anupama and Soorya Prakash",
@@ -268,7 +317,11 @@ test("long names stay within the voucher and the interface passes accessibility 
   await page.getByLabel("Couple Name", { exact: true }).fill("W".repeat(80));
   await page.getByLabel("Sponsor / Regards Name", { exact: true }).fill("W".repeat(80));
   await page.getByRole("switch", { name: "Include original invitation message" }).click();
-  for (const selector of [".guest-name", ".sponsor-name", ".invitation-dear"]) {
+  for (const selector of [
+    '.voucher-front [data-element-id="couple"] .artwork-text',
+    '.voucher-front [data-element-id="sponsor"] .artwork-text',
+    '.voucher-front [data-element-id="invitation"] .artwork-text',
+  ]) {
     const fits = await page
       .locator(selector)
       .evaluate(
@@ -277,10 +330,14 @@ test("long names stay within the voucher and the interface passes accessibility 
       );
     expect(fits, `${selector} should fit without clipping`).toBe(true);
   }
-  const condition = await page.locator(".weekday-condition").boundingBox();
-  const footer = await page.locator(".front-regards").boundingBox();
+  const condition = await page
+    .locator('.voucher-front [data-element-id="condition"]')
+    .boundingBox();
+  const footer = await page.locator('.voucher-front [data-element-id="footer"]').boundingBox();
   expect(condition!.y + condition!.height).toBeLessThanOrEqual(footer!.y);
-  const sponsor = await page.locator(".sponsor-name").boundingBox();
+  const sponsor = await page
+    .locator('.voucher-front [data-element-id="sponsor"] .artwork-text')
+    .boundingBox();
   expect(sponsor!.y + sponsor!.height).toBeLessThan(footer!.y + footer!.height - 16);
   await page.getByRole("tab", { name: "Front", exact: true }).focus();
   await page.keyboard.press("ArrowRight");
@@ -289,4 +346,179 @@ test("long names stay within the voucher and the interface passes accessibility 
     "aria-selected",
     "true",
   );
+});
+
+test("templates have independent saved edits and the canvas supports move, resize, history, and layers", async ({
+  page,
+}) => {
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  await signIn(page);
+  await page.getByRole("button", { name: "Edit design", exact: true }).click();
+  const heading = page.locator('.voucher-front [data-element-id="title"]');
+  await heading.click();
+  await expect(page.getByLabel("Text content", { exact: true })).toHaveValue("Complimentary");
+  await page.getByLabel("Text content", { exact: true }).fill("A beautiful escape");
+  await page.getByLabel("Font size", { exact: true }).fill("48");
+  await page.getByLabel("Element color", { exact: true }).fill("#264d35");
+  await page.getByRole("button", { name: "Italic text", exact: true }).click();
+  await expect(heading).toHaveCSS("font-style", "italic");
+  await expect(heading).toHaveCSS("color", "rgb(38, 77, 53)");
+  await expect(heading.locator(".artwork-text")).toHaveText("A beautiful escape");
+  await heading.scrollIntoViewIfNeeded();
+  const bounds = (await heading.boundingBox())!;
+  const scale = (await page.locator(".voucher-front").boundingBox())!.width / 900;
+  await page.mouse.move(bounds.x + 60 * scale, bounds.y + 20 * scale);
+  await page.mouse.down();
+  await page.mouse.move(bounds.x + 100 * scale, bounds.y + 36 * scale, { steps: 5 });
+  await page.mouse.up();
+  await expect(heading).toHaveCSS("left", "96px");
+  await expect(heading).toHaveCSS("top", "188px");
+  await page.getByRole("button", { name: "Undo design change", exact: true }).click();
+  await expect(heading).toHaveCSS("left", "56px");
+  await expect(heading).toHaveCSS("top", "172px");
+  await page.getByRole("button", { name: "Redo design change", exact: true }).click();
+  await expect(heading).toHaveCSS("left", "96px");
+  await page
+    .getByRole("button", { name: "Resize Main heading", exact: true })
+    .scrollIntoViewIfNeeded();
+  const handle = (await page
+    .getByRole("button", { name: "Resize Main heading", exact: true })
+    .boundingBox())!;
+  await page.mouse.move(handle.x + handle.width / 2, handle.y + handle.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(
+    handle.x + handle.width / 2 + 24 * scale,
+    handle.y + handle.height / 2 + 18 * scale,
+    { steps: 4 },
+  );
+  await page.mouse.up();
+  await expect(heading).toHaveCSS("width", "459px");
+  await expect(heading).toHaveCSS("height", "90px");
+  await page.locator('.canvas-editor[aria-label^="front design canvas"]').focus();
+  await page.keyboard.press("Shift+ArrowRight");
+  await expect(heading).toHaveCSS("left", "106px");
+  await page.keyboard.press("Control+z");
+  await expect(heading).toHaveCSS("left", "96px");
+  await page.getByRole("button", { name: "Lock element", exact: true }).click();
+  await expect(page.getByLabel("Text content", { exact: true })).toBeDisabled();
+  await expect(page.locator(".canvas-selection")).toHaveCount(0);
+  await page.getByRole("button", { name: "Unlock element", exact: true }).click();
+  await expect(page.getByLabel("Text content", { exact: true })).toBeEnabled();
+  await page.getByRole("button", { name: "Hide Main heading", exact: true }).click();
+  await expect(heading).toHaveCount(0);
+  await page.getByRole("button", { name: "Show Main heading", exact: true }).click();
+  await expect(heading).toHaveCount(1);
+  await page.locator(".preview-panel").scrollIntoViewIfNeeded();
+  await page.screenshot({ path: path.join(artifacts, "canvas-editor.png"), fullPage: true });
+  expect(
+    (await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze()).violations,
+  ).toEqual([]);
+
+  await page.getByRole("button", { name: "Use Forest Retreat template", exact: true }).click();
+  await expect(heading.locator(".artwork-text")).toHaveText("A gift of");
+  await expect(page.locator(".voucher-front")).toHaveCSS("background-color", "rgb(6, 61, 43)");
+  await page.getByRole("tab", { name: "Show Both", exact: true }).click();
+  await page.screenshot({ path: path.join(artifacts, "forest-template.png"), fullPage: true });
+  await page.getByRole("button", { name: "Use Ivory Editorial template", exact: true }).click();
+  await expect(heading.locator(".artwork-text")).toHaveText("An invitation");
+  await page.screenshot({ path: path.join(artifacts, "editorial-template.png"), fullPage: true });
+  await page.getByRole("button", { name: "Use Classic Garden template", exact: true }).click();
+  await expect(heading.locator(".artwork-text")).toHaveText("A beautiful escape");
+  await expect(heading).toHaveCSS("left", "96px");
+  await expect
+    .poll(() => page.evaluate(() => localStorage.getItem("upavan-design:v1")))
+    .toContain("A beautiful escape");
+  await page.reload();
+  await expect(heading.locator(".artwork-text")).toHaveText("A beautiful escape");
+  await expect(heading).toHaveCSS("width", "459px");
+  await page.getByRole("button", { name: "Reset Voucher", exact: true }).click();
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: "Reset Voucher", exact: true })
+    .click();
+  await expect(heading.locator(".artwork-text")).toHaveText("Complimentary");
+  expect(errors).toEqual([]);
+});
+
+test("new text, photos, and shapes can be styled and reordered, and exports omit editor handles", async ({
+  page,
+}) => {
+  await signIn(page);
+  await page.getByLabel("Couple Name", { exact: true }).fill("Devika and Arjun");
+  await page.getByRole("button", { name: "Design & layers", exact: true }).click();
+  await page.getByRole("button", { name: "Add text", exact: true }).click();
+  await page.getByLabel("Text content", { exact: true }).fill("Welcome, {{coupleName}}");
+  const customText = page.locator('.voucher-front .layer-text[data-element-id^="custom-"]');
+  await expect(customText).toHaveText("Welcome, Devika and Arjun");
+  await page.getByLabel("Typeface", { exact: true }).selectOption("sans");
+  await page.getByRole("button", { name: "Align text right", exact: true }).click();
+  await page.getByLabel("Rotation", { exact: true }).fill("10");
+  await expect(customText).toHaveCSS("text-align", "right");
+  await expect(customText).not.toHaveCSS("transform", "none");
+  await page.getByRole("button", { name: "Duplicate element", exact: true }).click();
+  await expect(customText).toHaveCount(2);
+  await page.getByRole("button", { name: "Delete element", exact: true }).click();
+  await expect(customText).toHaveCount(1);
+  await page.getByRole("button", { name: "Photo", exact: true }).click();
+  const customPhoto = page.locator('.voucher-front .layer-image[data-element-id^="custom-"]');
+  await page.getByLabel("Image source", { exact: true }).selectOption("heroImage");
+  await expect(customPhoto.locator("img")).toHaveAttribute("src", "/assets/resort-pool.jpg");
+  await page.getByLabel("Photo horizontal position", { exact: true }).fill("75");
+  await expect(customPhoto.locator("img")).toHaveCSS("object-position", "75% 50%");
+  await page.getByLabel("Corner radius", { exact: true }).fill("24");
+  await expect(customPhoto).toHaveCSS("border-radius", "24px");
+  const chooserEvent = page.waitForEvent("filechooser");
+  await page.getByRole("button", { name: "Replace image", exact: true }).click();
+  await (await chooserEvent).setFiles("public/assets/view.jpg");
+  await expect(customPhoto.locator("img")).toHaveAttribute("src", /^blob:/);
+  await page.getByRole("button", { name: "Shape", exact: true }).click();
+  const customShape = page.locator('.voucher-front .layer-shape[data-element-id^="custom-"]');
+  await page.getByLabel("Element color", { exact: true }).fill("#abc123");
+  await page.getByLabel("Opacity (%)", { exact: true }).fill("50");
+  await expect(customShape).toHaveCSS("opacity", "0.5");
+  await page.getByRole("button", { name: "Send backward", exact: true }).click();
+  const order = await page
+    .locator('.voucher-front [data-element-id^="custom-"]')
+    .evaluateAll((nodes) => nodes.map((node) => node.className));
+  expect(order.map((c) => c.replace("design-layer ", ""))).toEqual([
+    "layer-text",
+    "layer-shape",
+    "layer-image",
+  ]);
+  await page.getByRole("button", { name: "Delete element", exact: true }).click();
+  await expect(customShape).toHaveCount(0);
+  await page.getByRole("button", { name: "Select Your photograph", exact: true }).click();
+  await expect(page.locator(".canvas-selection")).toHaveCount(1);
+  // Identical exports before/after finishing editing prove selection chrome is excluded.
+  const downloads: Buffer[] = [];
+  for (const editing of [true, false]) {
+    if (!editing) await page.getByRole("button", { name: "Finish editing", exact: true }).click();
+    const downloaded = page.waitForEvent("download");
+    await page.getByRole("button", { name: "Download Front PNG", exact: true }).click();
+    const file = await downloaded;
+    const destination = path.join(artifacts, `custom-${editing ? "editing" : "finished"}.png`);
+    await file.saveAs(destination);
+    downloads.push(await readFile(destination));
+  }
+  expect(downloads[0].equals(downloads[1])).toBe(true);
+  await page.getByRole("button", { name: "Edit design", exact: true }).click();
+  await page.getByRole("tab", { name: "Back", exact: true }).click();
+  const backHeading = page.locator('.voucher-back [data-element-id="hero-heading"]');
+  await backHeading.click();
+  await page.getByLabel("Text content", { exact: true }).fill("YOUR ESCAPE");
+  await expect(backHeading).toHaveText("YOUR ESCAPE");
+  await page.getByRole("tab", { name: "Front", exact: true }).click();
+  await expect(
+    page.locator(".design-side-picker").getByRole("button", { name: "Front", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByLabel("Text content", { exact: true })).toHaveCount(0);
+  await page.getByRole("button", { name: "Finish editing", exact: true }).click();
+  await page.getByRole("button", { name: "Use Forest Retreat template", exact: true }).click();
+  await page.getByRole("switch", { name: "Include original invitation message" }).click();
+  const downloaded = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Download Both as PDF", exact: true }).click();
+  const pdfPath = path.join(artifacts, "forest-voucher.pdf");
+  await (await downloaded).saveAs(pdfPath);
+  expect((await readFile(pdfPath)).toString("latin1").match(/\/Type \/Page\b/g)).toHaveLength(2);
 });

@@ -8,20 +8,31 @@ import {
   type RefObject,
   type KeyboardEvent,
 } from "react";
-import { Check, Eye, Layers2, Leaf, Maximize2 } from "lucide-react";
+import { Check, Eye, Layers2, Leaf, Maximize2, MousePointer2, Undo2, Redo2 } from "lucide-react";
 import { VoucherFront } from "@/components/VoucherFront";
 import { VoucherBack } from "@/components/VoucherBack";
 import { VoucherToolbar } from "@/components/VoucherToolbar";
 import type { ExportAction, VoucherData, VoucherView } from "@/types/voucher";
+import { CanvasEditor } from "@/components/CanvasEditor";
+import type { DesignerController } from "@/lib/useDesigner";
+import type { DesignSide } from "@/types/design";
 
 function ScaledCard({
   children,
   hidden,
   label,
+  designer,
+  side,
+  includeMessage,
+  disabled,
 }: {
   children: ReactNode;
   hidden: boolean;
   label: string;
+  designer: DesignerController;
+  side: DesignSide;
+  includeMessage: boolean;
+  disabled: boolean;
 }) {
   const container = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(900);
@@ -41,7 +52,15 @@ function ScaledCard({
       </div>
       <div ref={container} className="voucher-scale-frame" style={{ height: (width * 2) / 3 }}>
         <div className="voucher-scale" style={{ transform: `scale(${width / 900})` }}>
-          {children}
+          <CanvasEditor
+            designer={designer}
+            side={side}
+            scale={width / 900}
+            includeMessage={includeMessage}
+            disabled={disabled || hidden}
+          >
+            {children}
+          </CanvasEditor>
         </div>
       </div>
     </div>
@@ -58,6 +77,7 @@ interface PreviewProps {
   busy: ExportAction | null;
   disabled: boolean;
   onExport: (action: ExportAction) => void;
+  designer: DesignerController;
 }
 
 export function VoucherPreview({
@@ -70,6 +90,7 @@ export function VoucherPreview({
   busy,
   disabled,
   onExport,
+  designer,
 }: PreviewProps) {
   const tabs: { value: VoucherView; label: string }[] = [
     { value: "front", label: "Front" },
@@ -100,6 +121,45 @@ export function VoucherPreview({
         </span>
       </div>
       <VoucherToolbar busy={busy} disabled={disabled} onExport={onExport} />
+      <div className="canvas-toolbar no-print">
+        <button
+          type="button"
+          className={`button ${designer.editing ? "button-primary" : "button-outline"}`}
+          aria-pressed={designer.editing}
+          disabled={disabled}
+          onClick={() => designer.setEditing(!designer.editing)}
+        >
+          {designer.editing ? <Eye size={17} /> : <MousePointer2 size={17} />}
+          {designer.editing ? "Finish editing" : "Edit design"}
+        </button>
+        <div className="history-actions">
+          <button
+            type="button"
+            aria-label="Undo design change"
+            title="Undo (⌘/Ctrl Z on canvas)"
+            disabled={disabled || !designer.canUndo}
+            onClick={designer.undo}
+          >
+            <Undo2 size={18} />
+          </button>
+          <button
+            type="button"
+            aria-label="Redo design change"
+            title="Redo (⌘/Ctrl Shift Z on canvas)"
+            disabled={disabled || !designer.canRedo}
+            onClick={designer.redo}
+          >
+            <Redo2 size={18} />
+          </button>
+        </div>
+        <span>
+          {designer.editing
+            ? "Select, move, resize. Make it yours."
+            : designer.saved
+              ? "Design saved on this device"
+              : "Browser storage unavailable"}
+        </span>
+      </div>
       <div className="preview-surface">
         <div className="preview-viewbar no-print">
           <div className="preview-tabs" role="tablist" aria-label="Voucher side">
@@ -131,11 +191,30 @@ export function VoucherPreview({
           aria-labelledby={`tab-${view}`}
           tabIndex={0}
         >
-          <ScaledCard hidden={view === "back"} label="01 / FRONT">
-            <VoucherFront ref={frontRef} data={data} includeMessage={includeMessage} />
+          <ScaledCard
+            hidden={view === "back"}
+            label="01 / FRONT"
+            designer={designer}
+            side="front"
+            includeMessage={includeMessage}
+            disabled={disabled}
+          >
+            <VoucherFront
+              ref={frontRef}
+              data={data}
+              includeMessage={includeMessage}
+              design={designer.design}
+            />
           </ScaledCard>
-          <ScaledCard hidden={view === "front"} label="02 / BACK">
-            <VoucherBack ref={backRef} data={data} />
+          <ScaledCard
+            hidden={view === "front"}
+            label="02 / BACK"
+            designer={designer}
+            side="back"
+            includeMessage={includeMessage}
+            disabled={disabled}
+          >
+            <VoucherBack ref={backRef} data={data} design={designer.design} />
           </ScaledCard>
         </div>
         <div className="preview-caption no-print">

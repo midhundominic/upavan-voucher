@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Cormorant_Garamond, Inter } from "next/font/google";
 import "./globals.css";
+import "./designer.css";
 
 const serif = Cormorant_Garamond({
   subsets: ["latin"],
@@ -16,6 +17,10 @@ export const metadata: Metadata = {
   description:
     "A thoughtful gesture. A beautiful escape. Create a personalized complimentary stay voucher for Upavan Resort, Wayanad.",
   robots: { index: false, follow: false },
+  icons: {
+    icon: { url: "/assets/upavan-logo.png", type: "image/png" },
+    apple: { url: "/assets/upavan-logo.png", type: "image/png" },
+  },
 };
 export const viewport: Viewport = { width: "device-width", initialScale: 1, themeColor: "#063D2B" };
 

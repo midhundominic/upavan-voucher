@@ -48,8 +48,8 @@ export function ResetDialog({
         </div>
         <h2 id="reset-title">A fresh beginning?</h2>
         <p id="reset-description">
-          Reset the guest and sponsor names, remove uploaded images, and restore the original resort
-          assets. Your current changes will be cleared.
+          Restore the default names, resort images, and all three template designs. Your current
+          changes will be cleared.
         </p>
         <div className="dialog-actions">
           <button

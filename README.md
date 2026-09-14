@@ -1,6 +1,6 @@
 # Upavan Resort Voucher Designer
 
-A responsive Next.js App Router application for creating a personalized, two-sided complimentary stay voucher. Includes private sign-in, live editing, local image uploads, 1800 × 1200 PNGs, a two-page PDF, and print styling. No database is required.
+A responsive Next.js App Router application for creating a personalized, two-sided complimentary stay voucher. Includes private sign-in, three editable templates, a visual canvas editor, local image uploads, 1800 × 1200 PNGs, a two-page PDF, and print styling. No database is required.
 
 ## Run locally
 
@@ -34,30 +34,48 @@ For production: `npm run build` followed by `npm start`. Deploy to a Node.js-com
 
 Place or replace these files inside `public/assets/`:
 
-| File                  | Placement                                             |
-| --------------------- | ----------------------------------------------------- |
-| `upavan-logo.png`     | Resort logo on the front, back, and app header        |
-| `upavan-seal.png`     | Original resort seal next to the sponsor on the front |
-| `room-main.jpg`       | Main front photograph                                 |
-| `resort-pool.jpg`     | Back hero photograph                                  |
-| `room-2.jpg`          | First gallery photograph                              |
-| `restaurant.jpg`      | Second gallery photograph                             |
-| `view.jpg`            | Third gallery photograph                              |
-| `resort-property.jpg` | Sign-in page photograph                               |
+| File                  | Placement                                                       |
+| --------------------- | --------------------------------------------------------------- |
+| `upavan-logo.png`     | Resort logo on the front, back, app header, and browser favicon |
+| `upavan-seal.png`     | Original resort seal next to the sponsor on the front           |
+| `room-main.jpg`       | Main front photograph                                           |
+| `resort-pool.jpg`     | Back hero photograph                                            |
+| `room-2.jpg`          | First gallery photograph                                        |
+| `restaurant.jpg`      | Second gallery photograph                                       |
+| `view.jpg`            | Third gallery photograph                                        |
+| `resort-property.jpg` | Sign-in page photograph                                         |
 
 Existing files load by default. Reload the page after replacing a source file; production deployments should be rebuilt. The **Reset Voucher** button also checks the default files again. Missing photos have neutral botanical placeholders, and a missing logo has a simple text fallback. The seal is **never recreated**: upload your actual seal or add `upavan-seal.png`; until then, it is omitted from the voucher. Transparency and aspect ratio are preserved with `object-fit: contain`.
 
-The **Resort Assets** panel supports click-to-upload, drag-and-drop, replace, and remove for all seven voucher assets, including the seal. Accepts PNG, JPG/JPEG, and WEBP up to 15 MB and 40 megapixels. Images are decoded and validated before appearing. Browser object URLs are released on replace, remove, reset, and exit. Uploads never leave the browser and last only for the current tab session; names alone persist after refresh.
+The **Resort Assets** panel supports click-to-upload, drag-and-drop, replace, and remove for all seven voucher assets, including the seal. Accepts PNG, JPG/JPEG, and WEBP up to 15 MB and 40 megapixels. Images are decoded and validated before appearing. Browser object URLs are released on replace, remove, reset, and exit. Uploads never leave the browser and last only for the current tab session. Names and template layouts persist after refresh; uploaded photos return to the source defaults.
+
+The browser favicon and Apple touch icon use the actual `public/assets/upavan-logo.png` file. Replacing a voucher logo temporarily through the upload panel does not change the site favicon.
 
 Bundled logo and example resort photographs were downloaded from the [official Upavan Resort website](https://www.upavanresort.com/); exact source URLs are recorded in [public/assets/SOURCES.md](public/assets/SOURCES.md). These are official website defaults, not local copies of every chat attachment. Replace them with your preferred originals using the editor or filenames above.
 
 ## Personalize the voucher
 
-Edit **Couple Name** and **Sponsor / Regards Name** for an instant preview. Both names are stored locally in your browser under `upavan-voucher:v1`, with graceful recovery if storage is blocked or corrupted. Only these two text values are editable; other voucher wording stays fixed.
+Edit **Couple Name** and **Sponsor / Regards Name** for an instant preview. Both names are stored locally in your browser under `upavan-voucher:v1`, with graceful recovery if storage is blocked or corrupted. Use **Design & layers** to customize the rest of the wording and composition.
 
-To change the initial names in the code, edit `coupleName` and `sponsorName` in `lib/defaults.ts`. Previously saved browser names take priority; use **Reset Voucher** to restore the source defaults. Reset asks for confirmation before clearing edits and restoring image files.
+To change the initial names in the code, edit `coupleName` and `sponsorName` in `lib/defaults.ts`. Previously saved browser names take priority; use **Reset Voucher** to restore the source defaults. Reset asks for confirmation before clearing names, uploads, and all three template drafts and restoring the source defaults.
 
 Use **Front**, **Back**, or **Show Both** above the preview. Enable **A note from the heart** to include the original invitation on the front; the names are drawn from the same fields. Names support up to 80 characters and scale down for longer entries. The sponsor receives one trailing period.
+
+## Templates and visual editing
+
+Choose **Classic Garden**, **Forest Retreat**, or **Ivory Editorial** above the workspace. Each includes front and back artwork. Switching templates preserves the edits to each design. Drafts and the selected template are saved locally under `upavan-design:v1`; they do not sync between devices. Template definitions live in `lib/templates.ts`.
+
+Select **Edit design** or **Design & layers**, then click a voucher element or choose it in the **Layers** panel:
+
+- Drag an element to move it; drag its bottom-right handle to resize. Center guides snap elements into place. Hold Alt/Option to bypass snapping; hold Shift while resizing to preserve the frame ratio. Logo and seal images always retain their aspect ratio inside their frames.
+- Edit text, typeface, font size, bold, italic, alignment, and color in the left panel. Double-click text, or press Enter on a selected text element, to focus its content field. Text automatically shrinks to fit its frame; enlarge the frame if needed.
+- Keep `{{coupleName}}` and `{{sponsorName}}` in text to link it to the personalization fields. Replacing those tokens with ordinary text makes that particular element independent.
+- Select a photograph to change its image source, crop position, or corner radius. **Replace image** opens the upload control for that source; replacing a shared source updates every layer using it.
+- Use **Add text**, **Photo**, and **Shape** to add elements. Adjust position, size, rotation, opacity, and card background. Duplicate, delete, or change stacking order using the inspector buttons; hide or show layers using the eye buttons.
+- Background decorations start locked. Select them in the layer list and unlock to edit. Up to 100 layers are supported per side.
+- Undo and redo retain the last 40 design actions during the current page session. With the canvas focused: arrow keys move 1 px, Shift + arrows move 10 px, Delete removes the selected unlocked element, Escape clears selection or cancels a drag, and Ctrl/Cmd + Z (Shift for redo) controls history. The resize handle also supports arrow keys.
+
+**Finish editing** shows the clean preview. Exports always include the current template's artwork and exclude selection borders, handles, and editor controls. The interface uses larger labels and 16 px name inputs on desktop and mobile.
 
 ## Download and print
 
@@ -84,8 +102,8 @@ npm run test:e2e
 
 To run the same browser checks against the optimized build, run `npm run build`, then `E2E_PRODUCTION=1 npm run test:e2e` (macOS/Linux). `npm run format:check` verifies source formatting.
 
-Browser tests use an isolated server at port 3100 and test-only credentials. They use installed Google Chrome on macOS; elsewhere install Chromium with `npx playwright install chromium`. Coverage includes login/logout, rejected credentials and tampered cookies, localStorage recovery, live personalization, uploads and reset, mobile layout, actual PNG dimensions, and two-page PDF/print output. Screenshots and example downloads are written under `test-results/artifacts/`.
+Browser tests use an isolated server at port 3100 and test-only credentials. They use installed Google Chrome on macOS; elsewhere install Chromium with `npx playwright install chromium`. Coverage includes login/logout, rejected credentials and tampered cookies, localStorage recovery, personalization, uploads and reset, mobile readability, template persistence, canvas movement and resizing, undo/redo, text styling, layer controls, accessibility, actual PNG dimensions, and two-page PDF/print output. Screenshots and example downloads are written under `test-results/artifacts/`. Use the production test command if a development server for this project is already running.
 
 ## Project structure
 
-`app/` contains pages, server actions, fonts, and styling. `components/` contains the editor, reusable voucher sides, asset controls, toolbar, and sign-in form. `lib/` contains defaults, local storage, export, authentication, and asset discovery. `types/voucher.ts` defines the voucher data model.
+`app/` contains pages, server actions, fonts, and styling. `components/` contains the template picker, canvas, property inspector, layer list, reusable voucher artwork, asset controls, toolbar, and sign-in form. `lib/` contains template definitions, design history, local storage, defaults, export, authentication, and asset discovery. `types/voucher.ts` and `types/design.ts` define voucher data and editable artwork.

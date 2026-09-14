@@ -26,8 +26,12 @@ import { VoucherPreview } from "@/components/VoucherPreview";
 import { ASSETS, MAX_NAME_LENGTH } from "@/lib/defaults";
 import { loadNames, saveNames } from "@/lib/storage";
 import type { AssetKey, ExportAction, VoucherData, VoucherView } from "@/types/voucher";
+import { useDesigner } from "@/lib/useDesigner";
+import { TemplatePicker } from "@/components/TemplatePicker";
+import { DesignInspector } from "@/components/DesignInspector";
 
 export function VoucherEditor({ defaults }: { defaults: VoucherData }) {
+  const designer = useDesigner();
   const [data, setData] = useState(defaults);
   const [hydrated, setHydrated] = useState(false);
   const [storageOk, setStorageOk] = useState(true);
@@ -135,6 +139,7 @@ export function VoucherEditor({ defaults }: { defaults: VoucherData }) {
       setData(restored);
       setStorageOk(saveNames(restored));
       setIncludeMessage(false);
+      designer.reset();
       setView("front");
       setAssetGeneration((value) => value + 1);
       setResetOpen(false);
@@ -152,7 +157,7 @@ export function VoucherEditor({ defaults }: { defaults: VoucherData }) {
     }
   }
 
-  const disabled = !hydrated || busy !== null || resetting;
+  const disabled = !hydrated || !designer.ready || busy !== null || resetting;
   return (
     <>
       <header className="app-header no-print">
@@ -198,147 +203,181 @@ export function VoucherEditor({ defaults }: { defaults: VoucherData }) {
             </span>
           </div>
         </div>
+        <TemplatePicker
+          selected={designer.workspace.template}
+          onSelect={designer.setTemplate}
+          disabled={disabled}
+          image={data.mainRoomImage}
+        />
         <div className="designer-grid">
           <aside className="controls-panel no-print" aria-label="Voucher personalization">
-            <section className="control-card details-card">
-              <div className="control-heading">
-                <span className="section-icon">
-                  <Users size={18} strokeWidth={1.5} />
-                </span>
-                <div>
-                  <h2>Voucher Details</h2>
-                  <p>A personal touch goes a long way.</p>
-                </div>
-                <span className="section-number" aria-hidden="true">
-                  01
-                </span>
-              </div>
-              <div className="form-fields">
-                <div className="field-group">
-                  <label htmlFor="couple-name">
-                    Couple Name
-                    <Heart size={12} />
-                  </label>
-                  <input
-                    id="couple-name"
-                    value={data.coupleName}
-                    onChange={(event) => updateName("coupleName", event.target.value)}
-                    maxLength={MAX_NAME_LENGTH}
-                    placeholder="Enter the couple’s names"
-                    autoComplete="off"
-                    disabled={disabled}
-                    aria-describedby="couple-hint"
-                  />
-                  <span id="couple-hint" className="field-hint">
-                    The names that make this stay special.
-                  </span>
-                </div>
-                <div className="field-group">
-                  <label htmlFor="sponsor-name">Sponsor / Regards Name</label>
-                  <input
-                    id="sponsor-name"
-                    value={data.sponsorName}
-                    onChange={(event) => updateName("sponsorName", event.target.value)}
-                    maxLength={MAX_NAME_LENGTH}
-                    placeholder="Enter the sender’s names"
-                    autoComplete="off"
-                    disabled={disabled}
-                    aria-describedby="sponsor-hint"
-                  />
-                  <span id="sponsor-hint" className="field-hint">
-                    Shown with your warm regards.
-                  </span>
-                </div>
-              </div>
-              <div
-                className={`saved-indicator ${!storageOk ? "storage-warning" : ""}`}
-                role="status"
+            <div className="control-mode-tabs">
+              <button
+                type="button"
+                aria-pressed={!designer.editing}
+                disabled={disabled}
+                onClick={() => designer.setEditing(false)}
               >
-                <CheckCheck size={14} />
-                {!hydrated
-                  ? "Loading your details…"
-                  : storageOk
-                    ? "Names are saved on this device"
-                    : "Browser storage is unavailable; names won’t persist"}
-              </div>
-            </section>
-            <section className="control-card assets-card">
-              <div className="control-heading">
-                <span className="section-icon">
-                  <ImageIcon size={18} strokeWidth={1.5} />
-                </span>
-                <div>
-                  <h2>Resort Assets</h2>
-                  <p>Set the scene for their escape.</p>
+                Personalize
+              </button>
+              <button
+                type="button"
+                aria-pressed={designer.editing}
+                disabled={disabled}
+                onClick={() => designer.setEditing(true)}
+              >
+                Design & layers
+              </button>
+            </div>
+            {designer.editing && (
+              <DesignInspector
+                designer={designer}
+                side={view === "both" ? (designer.selected?.side ?? "front") : view}
+                disabled={disabled}
+                onSideChange={setView}
+              />
+            )}
+            <div className="personalization-sections" hidden={designer.editing}>
+              <section className="control-card details-card">
+                <div className="control-heading">
+                  <span className="section-icon">
+                    <Users size={18} strokeWidth={1.5} />
+                  </span>
+                  <div>
+                    <h2>Voucher Details</h2>
+                    <p>A personal touch goes a long way.</p>
+                  </div>
+                  <span className="section-number" aria-hidden="true">
+                    01
+                  </span>
                 </div>
-                <span className="section-number" aria-hidden="true">
-                  02
-                </span>
-              </div>
-              <div className="assets-list">
-                {ASSETS.map((asset) => (
-                  <ImageUploader
-                    key={`${assetGeneration}-${asset.key}`}
-                    asset={asset}
-                    src={data[asset.key]}
-                    onChange={(src) => updateAsset(asset.key, src)}
-                    onLoadingChange={(loading) => updateUploading(asset.key, loading)}
-                    disabled={disabled}
-                  />
-                ))}
-              </div>
-              <div className="assets-help">
-                <Info size={13} />
-                <p>
-                  Drop an image onto any row, or select to upload.
-                  <br />
-                  PNG, JPG, WEBP · up to 15 MB each.
-                  <br />
-                  <span>Uploads stay private in this tab until refresh.</span>
-                </p>
-              </div>
-            </section>
-            <section className="control-card message-card">
-              <div className="message-toggle-row">
-                <Mail size={18} strokeWidth={1.5} />
-                <label htmlFor="include-message">
-                  <strong>A note from the heart</strong>
-                  <span>Include the original invitation</span>
-                </label>
-                <button
-                  id="include-message"
-                  type="button"
-                  role="switch"
-                  aria-checked={includeMessage}
-                  aria-label="Include original invitation message"
-                  className="toggle-switch"
-                  onClick={() => setIncludeMessage(!includeMessage)}
-                  disabled={disabled}
+                <div className="form-fields">
+                  <div className="field-group">
+                    <label htmlFor="couple-name">
+                      Couple Name
+                      <Heart size={12} />
+                    </label>
+                    <input
+                      id="couple-name"
+                      value={data.coupleName}
+                      onChange={(event) => updateName("coupleName", event.target.value)}
+                      maxLength={MAX_NAME_LENGTH}
+                      placeholder="Enter the couple’s names"
+                      autoComplete="off"
+                      disabled={disabled}
+                      aria-describedby="couple-hint"
+                    />
+                    <span id="couple-hint" className="field-hint">
+                      The names that make this stay special.
+                    </span>
+                  </div>
+                  <div className="field-group">
+                    <label htmlFor="sponsor-name">Sponsor / Regards Name</label>
+                    <input
+                      id="sponsor-name"
+                      value={data.sponsorName}
+                      onChange={(event) => updateName("sponsorName", event.target.value)}
+                      maxLength={MAX_NAME_LENGTH}
+                      placeholder="Enter the sender’s names"
+                      autoComplete="off"
+                      disabled={disabled}
+                      aria-describedby="sponsor-hint"
+                    />
+                    <span id="sponsor-hint" className="field-hint">
+                      Shown with your warm regards.
+                    </span>
+                  </div>
+                </div>
+                <div
+                  className={`saved-indicator ${!storageOk ? "storage-warning" : ""}`}
+                  role="status"
                 >
-                  <span />
-                </button>
-              </div>
-              <details className="invitation-details">
-                <summary>
-                  Read the message <ChevronDown size={13} />
-                </summary>
-                <div>
-                  <p>Dear {data.coupleName.trim() || "our guests"},</p>
+                  <CheckCheck size={14} />
+                  {!hydrated
+                    ? "Loading your details…"
+                    : storageOk
+                      ? "Names are saved on this device"
+                      : "Browser storage is unavailable; names won’t persist"}
+                </div>
+              </section>
+              <section className="control-card assets-card">
+                <div className="control-heading">
+                  <span className="section-icon">
+                    <ImageIcon size={18} strokeWidth={1.5} />
+                  </span>
+                  <div>
+                    <h2>Resort Assets</h2>
+                    <p>Set the scene for their escape.</p>
+                  </div>
+                  <span className="section-number" aria-hidden="true">
+                    02
+                  </span>
+                </div>
+                <div className="assets-list">
+                  {ASSETS.map((asset) => (
+                    <ImageUploader
+                      key={`${assetGeneration}-${asset.key}`}
+                      asset={asset}
+                      src={data[asset.key]}
+                      onChange={(src) => updateAsset(asset.key, src)}
+                      onLoadingChange={(loading) => updateUploading(asset.key, loading)}
+                      disabled={disabled}
+                    />
+                  ))}
+                </div>
+                <div className="assets-help">
+                  <Info size={13} />
                   <p>
-                    We invite you to stay at Upavan Resort, Wayanad for a day and a night at your
-                    convenience, except on Saturdays and Sundays. Please let us know the date of
-                    your convenience.
-                  </p>
-                  <p>
-                    With warm regards and best wishes,
+                    Drop an image onto any row, or select to upload.
                     <br />
-                    <strong>
-                      {data.sponsorName.trim().replace(/[.。]+$/u, "") || "Your hosts"}.
-                    </strong>
+                    PNG, JPG, WEBP · up to 15 MB each.
+                    <br />
+                    <span>Uploads stay private in this tab until refresh.</span>
                   </p>
                 </div>
-              </details>
-            </section>
+              </section>
+              <section className="control-card message-card">
+                <div className="message-toggle-row">
+                  <Mail size={18} strokeWidth={1.5} />
+                  <label htmlFor="include-message">
+                    <strong>A note from the heart</strong>
+                    <span>Include the original invitation</span>
+                  </label>
+                  <button
+                    id="include-message"
+                    type="button"
+                    role="switch"
+                    aria-checked={includeMessage}
+                    aria-label="Include original invitation message"
+                    className="toggle-switch"
+                    onClick={() => setIncludeMessage(!includeMessage)}
+                    disabled={disabled}
+                  >
+                    <span />
+                  </button>
+                </div>
+                <details className="invitation-details">
+                  <summary>
+                    Read the message <ChevronDown size={13} />
+                  </summary>
+                  <div>
+                    <p>Dear {data.coupleName.trim() || "our guests"},</p>
+                    <p>
+                      We invite you to stay at Upavan Resort, Wayanad for a day and a night at your
+                      convenience, except on Saturdays and Sundays. Please let us know the date of
+                      your convenience.
+                    </p>
+                    <p>
+                      With warm regards and best wishes,
+                      <br />
+                      <strong>
+                        {data.sponsorName.trim().replace(/[.。]+$/u, "") || "Your hosts"}.
+                      </strong>
+                    </p>
+                  </div>
+                </details>
+              </section>
+            </div>
             <button
               className="reset-button"
               type="button"
@@ -359,6 +398,7 @@ export function VoucherEditor({ defaults }: { defaults: VoucherData }) {
             busy={busy}
             disabled={disabled || uploading.size > 0}
             onExport={(action) => void handleExport(action)}
+            designer={designer}
           />
         </div>
         <footer className="app-footer no-print">
